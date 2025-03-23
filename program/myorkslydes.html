@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyorkSlydes Editor</title>
+    <style>
+        :root {
+            --toolbar-bg: #f8f9fa;
+            --toolbar-border: #dee2e6;
+            --button-hover: #e9ecef;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Aptos', Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            padding: 10px;
+            background: var(--toolbar-bg);
+            border-bottom: 1px solid var(--toolbar-border);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar button,
+        .toolbar select,
+        .toolbar input {
+            padding: 6px 12px;
+            border: 1px solid #ced4da;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 80px;
+        }
+
+        .toolbar button:hover {
+            background: var(--button-hover);
+        }
+
+        #slides-container {
+            display: flex;
+            flex: 1;
+            overflow: auto;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            border: none;
+            resize: none;
+            font-size: 12pt;
+            line-height: 1.5;
+            outline: none;
+            background: white;
+            margin: 0;
+            box-sizing: border-box;
+            overflow-y: auto; /* İçerik taşarsa dikey kaydırma çubuğu ekler */
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .status-bar {
+            padding: 8px;
+            background: var(--toolbar-bg);
+            border-top: 1px solid var(--toolbar-border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .lang-switcher {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+        }
+
+        .slide-panel {
+            width: 200px;
+            background: var(--toolbar-bg);
+            border-right: 1px solid var(--toolbar-border);
+            padding: 10px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .slide-thumbnail {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            background: white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .slide-thumbnail.active {
+            border-color: #007bff;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .slide-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="lang-switcher">
+        <select id="language" onchange="changeLanguage(this.value)">
+            <option value="tr">Türkçe</option>
+            <option value="en">English</option>
+        </select>
+    </div>
+
+    <div class="slide-panel" id="slide-panel">
+        <div class="slide-thumbnail active" onclick="selectSlide(0)">Slayt 1</div>
+    </div>
+
+    <div class="main-content">
+        <div class="toolbar">
+            <button data-lang-key="newSlide" onclick="newSlide()">Yeni Slayt</button>
+            <button data-lang-key="deleteSlide" onclick="deleteSlide()">Slaytı Sil</button>
+            <button data-lang-key="save" onclick="saveSlides()">Kaydet</button>
+            <button onclick="prevSlide()">Önceki Slayt</button>
+            <button onclick="nextSlide()">Sonraki Slayt</button>
+            <button onclick="startPresentation()">Sunumu Başlat</button>
+
+            <select id="fontFamily" data-lang-key="font" onchange="changeFontFamily(this.value)">
+                <option value="Aptos">Aptos</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Arial">Arial</option>
+            </select>
+
+            <select id="fontSize" data-lang-key="size" onchange="changeFontSize(this.value)">
+                <option value="12">12</option>
+                <option value="14">14</option>
+                <option value="16" selected>16</option>
+            </select>
+
+            <button data-lang-key="bold" onclick="formatText('bold')"><b>K</b></button>
+            <button data-lang-key="italic" onclick="formatText('italic')"><i>İ</i></button>
+            <button data-lang-key="underline" onclick="formatText('underline')"><u>A</u></button>
+
+            <button onclick="alignText('left')">Sol</button>
+            <button onclick="alignText('center')">Ortala</button>
+            <button onclick="alignText('right')">Sağ</button>
+            <button onclick="alignText('justify')">İki Yana Yasla</button>
+
+            <input type="color" id="textColorInput" onchange="changeTextColor(this.value)">
+            <input type="color" id="backgroundColorInput" onchange="changeBackgroundColor(this.value)">
+
+            <button onclick="insertImage()">Resim Ekle</button>
+            <button onclick="insertShape()">Şekil Ekle</button>
+            <button onclick="insertChart()">Grafik Ekle</button>
+            <button onclick="insertTable()">Tablo Ekle</button>
+        </div>
+
+        <div class="slide-container">
+            <div id="slides-container">
+                <div class="slide active" contenteditable="true"></div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span data-lang-key="slides">Slaytlar: <span id="slideCount">1</span></span>
+            <span data-lang-key="currentSlide">Mevcut Slayt: <span id="currentSlide">1</span></span>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            tr: {
+                newSlide: "Yeni Slayt",
+                deleteSlide: "Slaytı Sil",
+                save: "Kaydet",
+                font: "Yazı Tipi",
+                size: "Boyut",
+                bold: "Kalın",
+                italic: "İtalik",
+                underline: "Altı Çizili",
+                slides: "Slaytlar",
+                currentSlide: "Mevcut Slayt",
+                saveSuccess: "Başarıyla kaydedildi!",
+                fileError: "Dosya hatası!"
+            },
+            en: {
+                newSlide: "New Slide",
+                deleteSlide: "Delete Slide",
+                save: "Save",
+                font: "Font",
+                size: "Size",
+                bold: "Bold",
+                italic: "Italic",
+                underline: "Underline",
+                slides: "Slides",
+                currentSlide: "Current Slide",
+                saveSuccess: "Saved successfully!",
+                fileError: "File error!"
+            }
+        };
+
+        let currentLang = navigator.language.startsWith('tr') ? 'tr' : 'en';
+        let slides = [''];
+        let currentSlideIndex = 0;
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.dataset.langKey;
+                el.textContent = translations[lang][key];
+            });
+            document.getElementById('language').value = lang;
+        }
+
+        const slidesContainer = document.getElementById('slides-container');
+        const slidePanel = document.getElementById('slide-panel');
+        const slideCountSpan = document.getElementById('slideCount');
+        const currentSlideSpan = document.getElementById('currentSlide');
+
+        function newSlide() {
+            slides.push('');
+            const slide = document.createElement('div');
+            slide.className = 'slide';
+            slide.contentEditable = 'true';
+            slidesContainer.appendChild(slide);
+            currentSlideIndex = slides.length - 1;
+            updateSlides();
+            updateStatusBar();
+            updateSlidePanel();
+        }
+
+        function deleteSlide() {
+            if (slides.length > 1) {
+                slides.splice(currentSlideIndex, 1);
+                slidesContainer.removeChild(slidesContainer.childNodes[currentSlideIndex]);
+                currentSlideIndex = Math.max(0, currentSlideIndex - 1);
+                updateSlides();
+                updateStatusBar();
+                updateSlidePanel();
+            }
+        }
+
+        function saveSlides() {
+            const blob = new Blob([JSON.stringify(slides)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.download = `presentation.myorksldy`;
+            a.href = url;
+            a.click();
+
+            alert(translations[currentLang].saveSuccess);
+            URL.revokeObjectURL(url);
+        }
+
+        function updateSlides() {
+            const slideElements = document.querySelectorAll('.slide');
+            slideElements.forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlideIndex) {
+                    slide.classList.add('active');
+                }
+            });
+            if (slideElements[currentSlideIndex]) {
+                slides[currentSlideIndex] = slideElements[currentSlideIndex].innerHTML;
+            }
+        }
+
+        function updateStatusBar() {
+            slideCountSpan.textContent = slides.length;
+            currentSlideSpan.textContent = currentSlideIndex + 1;
+        }
+
+        function updateSlidePanel() {
+            slidePanel.innerHTML = '';
+            slides.forEach((slide, index) => {
+                const slideThumbnail = document.createElement('div');
+                slideThumbnail.className = 'slide-thumbnail';
+                if (index === currentSlideIndex) {
+                    slideThumbnail.classList.add('active');
+                }
+                slideThumbnail.textContent = `Slayt ${index + 1}`;
+                slideThumbnail.onclick = () => selectSlide(index);
+                slidePanel.appendChild(slideThumbnail);
+            });
+        }
+
+        function selectSlide(index) {
+            currentSlideIndex = index;
+            updateSlides();
+            updateStatusBar();
+            updateSlidePanel();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            changeLanguage(currentLang);
+            updateStatusBar();
+            updateSlidePanel();
+            if (slides.length > 0) {
+                updateSlides();
+            }
+        });
+
+        slidesContainer.addEventListener('input', () => {
+            const activeSlide = document.querySelector('.slide.active');
+            if (activeSlide) {
+                slides[currentSlideIndex] = activeSlide.innerHTML;
+            }
+        });
+
+        function changeFontFamily(font) {
+            document.execCommand('fontName', false, font);
+        }
+
+        function changeFontSize(size) {
+            document.execCommand('fontSize', false, size);
+        }
+
+        function formatText(command) {
+            document.execCommand(command, false, null);
+        }
+
+        function alignText(alignment) {
+            document.execCommand('justify' + alignment.charAt(0).toUpperCase() + alignment.slice(1), false, null);
+        }
+
+        function changeTextColor(color) {
+            document.execCommand('foreColor', false, color);
+        }
+
+        function changeBackgroundColor(color) {
+            document.execCommand('hiliteColor', false, color);
+        }
+
+        function insertImage() {
+            const url = prompt("Enter image URL:");
+            if (url) {
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                document.querySelector('.slide.active').appendChild(img);
+            }
+        }
+
+        function insertShape() {
+            alert("Shape insertion not implemented yet.");
+        }
+
+        function insertChart() {
+            alert("Chart insertion not implemented yet.");
+        }
+
+        function insertTable() {
+            const rows = prompt("Enter number of rows:");
+            const cols = prompt("Enter number of columns:");
+            if (rows && cols) {
+                let tableHTML = "<table>";
+                for (let i = 0; i < rows; i++) {
+                    tableHTML += "<tr>";
+                    for (let j = 0; j < cols; j++) {
+                        tableHTML += "<td></td>";
+                    }
+                    tableHTML += "</tr>";
+                }
+                tableHTML += "</table>";
+                document.querySelector('.slide.active').innerHTML += tableHTML;
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                updateSlides();
+                updateStatusBar();
+                updateSlidePanel();
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlideIndex < slides.length - 1) {
+                currentSlideIndex++;
+                updateSlides();
+                updateStatusBar();
+                updateSlidePanel();
+            }
+        }
+
+        function startPresentation() {
+            let slideIndex = 0;
+            const slideElements = document.querySelectorAll('.slide');
+            slideElements.forEach(slide => slide.classList.remove('active'));
+
+            function showSlide() {
+                if (slideIndex < slideElements.length) {
+                    slideElements[slideIndex].classList.add('active');
+                    setTimeout(() => {
+                        slideElements[slideIndex].classList.remove('active');
+                        slideIndex++;
+                        showSlide();
+                    }, 3000);
+                }
+            }
+            showSlide();
+        }
+    </script>
+</body>
+
+</html>
