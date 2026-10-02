@@ -1,42 +1,54 @@
-# Myork Slides Editor
+# MyorkSlydes
 
-## Açıklama (Description)
+**MyorkSlydes** is a browser-based presentation editor prototype by Two Plasma Studios. The current implementation is a single HTML file with a slide list, editing toolbar and presentation mode.
 
-Myork Slides Editor, etkileşimli slaytlar oluşturmak için tasarlanmış, web tabanlı bir uygulamadır. Bu uygulama, kullanıcıların zengin içerikli sunumlar oluşturmasına olanak tanır.
+> **Project status:** Prototype / work in progress. Not every presentation feature is production-ready, and browser editing behavior may vary.
 
-**Lütfen Dikkat:** Bu uygulama, Two Plasma Studios tarafından geliştirilmekte olan bir demo sürümüdür. Bazı özellikler henüz tam olarak işlevsel olmayabilir.
+## Current features
 
-## Özellikler (Features)
+- Turkish and English interface toggle
+- Create and delete slides
+- Navigate between slides and select them from a slide panel
+- Edit slide content in the browser
+- Save slide data using the browser's file download flow
+- Text formatting and alignment controls
+- Insert an image using an image URL
+- Insert a table by specifying rows and columns
+- Basic rectangle, circle and line insertion
+- Basic bar chart insertion
+- Simple timed presentation mode
 
-* Slayt oluşturma ve düzenleme
-* Yazı tipi, boyutu ve rengi ayarlama
-* Metin biçimlendirme (kalın, italik, altı çizili)
-* Metin hizalama
-* Resim ekleme
-* Slaytları kaydetme
-* Slaytlar arası geçiş
-* Sunumu başlatma
+## Run it
 
-## Yakında Gelecek Özellikler (Upcoming Features)
+1. Clone or download this repository.
+2. Open `program/myorkslydes.html` in a current desktop browser.
+3. Create slides and use the toolbar to edit or present.
 
-* Şekil ekleme
-* Grafik ekleme
-* Tablo ekleme
-* Video ve ses ekleme
-* Gelişmiş düzenleme araçları
+No package installation or build step is required for the current HTML prototype.
 
-## Kullanım (Usage)
+## Known limitations
 
-1.  Uygulamayı bir web tarayıcısında açın.
-2.  Araç çubuğunu kullanarak slaytlar oluşturun ve düzenleyin.
-3.  Slaytlar arasında geçiş yapmak için önceki ve sonraki slayt düğmelerini kullanın.
-4.  Sunumu başlatmak için "Sunumu Başlat" düğmesine tıklayın.
-5.  Slaytları kaydetmek için "Kaydet" düğmesine tıklayın.
+- The project uses browser editing APIs such as `document.execCommand`; formatting can vary by browser.
+- Presentation mode currently advances automatically on a timer and has limited controls.
+- Shapes and charts are basic visual elements, not a full vector or chart-editing system.
+- The current save/export behavior should be tested with real presentations before relying on it for important work.
+- There is no cloud collaboration or account system.
 
-## Geliştirme (Development)
+## Roadmap
 
-Bu uygulama, Two Plasma Studios tarafından geliştirilmektedir.
+- Reliable project format with import/export
+- Reorder slides and add keyboard navigation
+- Better presenter controls and transitions
+- Editable chart data and shape properties
+- Autosave and recovery
+- Browser-based regression tests
 
-## Lisans (License)
+## Links
 
-Bu uygulama MIT Lisansı altında lisanslanmıştır.
+- **Studio website:** https://twoplasmastudios.github.io/
+- **All studio projects:** https://twoplasmastudios.github.io/projects.html
+- **Source code:** https://github.com/TwoPlasmaStudios/myorkslydes
+
+---
+
+Made by **Two Plasma Studios**.
