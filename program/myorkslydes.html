@@ -370,11 +370,78 @@
         }
 
         function insertShape() {
-            alert("Shape insertion not implemented yet.");
+            const type = prompt("Shape type: rectangle, circle, line", "rectangle");
+            if (!type) return;
+
+            const slide = document.querySelector('.slide.active');
+            if (!slide) return;
+
+            const shape = document.createElement('div');
+            shape.style.display = 'inline-block';
+            shape.style.margin = '12px';
+            shape.style.verticalAlign = 'middle';
+            shape.style.background = '#4f46e5';
+            shape.style.border = '2px solid #312e81';
+            shape.style.width = '180px';
+            shape.style.height = '100px';
+
+            if (type.toLowerCase() === 'circle') {
+                shape.style.borderRadius = '50%';
+            } else if (type.toLowerCase() === 'line') {
+                shape.style.height = '4px';
+                shape.style.width = '240px';
+                shape.style.border = '0';
+                shape.style.background = '#111827';
+            } else {
+                shape.style.borderRadius = '10px';
+            }
+
+            shape.contentEditable = 'false';
+            slide.appendChild(shape);
         }
 
         function insertChart() {
-            alert("Chart insertion not implemented yet.");
+            const slide = document.querySelector('.slide.active');
+            if (!slide) return;
+
+            const labels = ["Q1", "Q2", "Q3", "Q4"];
+            const values = labels.map(label => {
+                const value = prompt("Value for " + label + ":", "10");
+                return Number.isFinite(Number(value)) ? Number(value) : 0;
+            });
+
+            const chart = document.createElement('div');
+            chart.style.display = 'flex';
+            chart.style.alignItems = 'end';
+            chart.style.gap = '12px';
+            chart.style.height = '220px';
+            chart.style.padding = '20px';
+            chart.style.margin = '16px 0';
+            chart.style.background = '#f8fafc';
+            chart.style.border = '1px solid #cbd5e1';
+            chart.style.borderRadius = '12px';
+
+            const max = Math.max(...values, 1);
+            values.forEach((value, index) => {
+                const column = document.createElement('div');
+                column.style.width = '52px';
+                column.style.height = Math.max(10, Math.round((value / max) * 150)) + 'px';
+                column.style.background = '#4f46e5';
+                column.style.borderRadius = '8px 8px 0 0';
+                column.title = labels[index] + ": " + value;
+
+                const label = document.createElement('span');
+                label.textContent = labels[index];
+                label.style.display = 'block';
+                label.style.marginTop = '156px';
+                label.style.fontSize = '12px';
+                label.style.textAlign = 'center';
+
+                column.appendChild(label);
+                chart.appendChild(column);
+            });
+
+            slide.appendChild(chart);
         }
 
         function insertTable() {
