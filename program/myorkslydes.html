@@ -74,6 +74,28 @@
             display: block;
         }
 
+        .myork-code {
+            display:block;
+            margin:12px 0;
+            padding:14px;
+            border-radius:8px;
+            background:#111827;
+            color:#e5e7eb;
+            font:13px/1.5 Consolas, "Cascadia Code", monospace;
+            white-space:pre-wrap;
+            overflow-wrap:anywhere;
+        }
+        .myork-code::before {
+            content:attr(data-language);
+            display:block;
+            color:#a5b4fc;
+            font-size:10px;
+            text-transform:uppercase;
+            margin-bottom:8px;
+        }
+        .slide table { border-collapse:collapse; max-width:100%; }
+        .slide td,.slide th { border:1px solid #9ca3af; padding:6px; min-width:45px; }
+
         .status-bar {
             padding: 8px;
             background: var(--toolbar-bg);
@@ -128,6 +150,8 @@
             overflow: hidden;
         }
     </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -147,6 +171,24 @@
             <button data-lang-key="newSlide" onclick="newSlide()">Yeni Slayt</button>
             <button data-lang-key="deleteSlide" onclick="deleteSlide()">Slaytı Sil</button>
             <button data-lang-key="save" onclick="saveSlides()">Kaydet</button>
+            <button onclick="loadSlides()">Open / Aç</button>
+            <button onclick="insertCodeBlock()">Code / Kod</button>
+            <select id="codeLanguage" aria-label="Code language">
+                <option value="html">HTML</option><option value="javascript">JavaScript</option>
+                <option value="typescript">TypeScript</option><option value="python">Python</option>
+                <option value="css">CSS</option><option value="java">Java</option>
+                <option value="dart">Dart</option><option value="jsx">React / JSX</option>
+                <option value="tsx">React / TSX</option><option value="json">JSON</option>
+                <option value="sql">SQL</option><option value="cpp">C++</option>
+                <option value="csharp">C#</option><option value="go">Go</option>
+                <option value="rust">Rust</option><option value="kotlin">Kotlin</option>
+                <option value="swift">Swift</option>
+            </select>
+            <button onclick="exportSlidesHTML()">Export HTML</button>
+            <button onclick="exportSlidesPDF()">Export PDF</button>
+            <button onclick="exportSlidesImage('png')">PNG</button>
+            <button onclick="exportSlidesImage('jpeg')">JPEG</button>
+            <button onclick="exportSlidesPPTX()">PPTX</button>
             <button onclick="prevSlide()">Önceki Slayt</button>
             <button onclick="nextSlide()">Sonraki Slayt</button>
             <button onclick="startPresentation()">Sunumu Başlat</button>
@@ -226,6 +268,9 @@
         };
 
         let currentLang = navigator.language.startsWith('tr') ? 'tr' : 'en';
+        const SLIDES_AUTOSAVE_KEY = 'myorkslydes_autosave_v2';
+        let autosaveTimer = null;
+        let presentationTimer = null;
         let slides = [''];
         let currentSlideIndex = 0;
 
@@ -266,17 +311,102 @@
             }
         }
 
-        function saveSlides() {
-            const blob = new Blob([JSON.stringify(slides)], { type: 'application/json' });
+        function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
-
             const a = document.createElement('a');
-            a.download = `presentation.myorksldy`;
             a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
             a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
 
-            alert(translations[currentLang].saveSuccess);
-            URL.revokeObjectURL(url);
+        function saveSlides() {
+            syncAllSlides();
+            const payload = {
+                format: 'myorkslydes',
+                version: 2,
+                lang: currentLang,
+                slides,
+                savedAt: new Date().toISOString()
+            };
+            try { localStorage.setItem(SLIDES_AUTOSAVE_KEY, JSON.stringify(payload)); } catch (error) {}
+            downloadBlob(new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'}), 'presentation.myorksldy');
+        }
+
+        function syncAllSlides() {
+            const elements = [...slidesContainer.querySelectorAll('.slide')];
+            slides = elements.map(el => el.innerHTML);
+            if (!slides.length) slides = [''];
+        }
+
+        function scheduleAutosave() {
+            clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(() => {
+                try {
+                    syncAllSlides();
+                    localStorage.setItem(SLIDES_AUTOSAVE_KEY, JSON.stringify({
+                        format:'myorkslydes', version:2, lang:currentLang, slides,
+                        savedAt:new Date().toISOString()
+                    }));
+                } catch (error) {}
+            }, 400);
+        }
+
+        function loadSlides() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.myorksldy,.json,application/json';
+            input.onchange = event => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        const incoming = Array.isArray(parsed) ? parsed : parsed.slides;
+                        if (!Array.isArray(incoming) || !incoming.every(item => typeof item === 'string')) {
+                            throw new Error('Unsupported presentation format');
+                        }
+                        slides = incoming.length ? incoming : [''];
+                        currentSlideIndex = 0;
+                        renderSlides();
+                        if (parsed.lang && translations[parsed.lang]) changeLanguage(parsed.lang);
+                        scheduleAutosave();
+                    } catch (error) {
+                        alert(translations[currentLang].fileError);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function renderSlides() {
+            slidesContainer.innerHTML = '';
+            slides.forEach((content, index) => {
+                const el = document.createElement('div');
+                el.className = 'slide' + (index === currentSlideIndex ? ' active' : '');
+                el.contentEditable = 'true';
+                el.innerHTML = content;
+                slidesContainer.appendChild(el);
+            });
+            updateStatusBar();
+            updateSlidePanel();
+        }
+
+        function recoverDraft() {
+            try {
+                const raw = localStorage.getItem(SLIDES_AUTOSAVE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (!parsed || !Array.isArray(parsed.slides) || !parsed.slides.every(x => typeof x === 'string')) return;
+                slides = parsed.slides.length ? parsed.slides : [''];
+                currentSlideIndex = 0;
+                renderSlides();
+                if (parsed.lang && translations[parsed.lang]) changeLanguage(parsed.lang);
+            } catch (error) {}
         }
 
         function updateSlides() {
@@ -320,18 +450,15 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             changeLanguage(currentLang);
+            recoverDraft();
             updateStatusBar();
             updateSlidePanel();
-            if (slides.length > 0) {
-                updateSlides();
-            }
+            if (slides.length > 0) updateSlides();
         });
 
         slidesContainer.addEventListener('input', () => {
-            const activeSlide = document.querySelector('.slide.active');
-            if (activeSlide) {
-                slides[currentSlideIndex] = activeSlide.innerHTML;
-            }
+            syncAllSlides();
+            scheduleAutosave();
         });
 
         function changeFontFamily(font) {
@@ -359,13 +486,44 @@
         }
 
         function insertImage() {
-            const url = prompt("Enter image URL:");
-            if (url) {
-                const img = document.createElement('img');
-                img.src = url;
-                img.style.maxWidth = '100%';
-                img.style.height = 'auto';
-                document.querySelector('.slide.active').appendChild(img);
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = event => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = file.name;
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    document.querySelector('.slide.active').appendChild(img);
+                    syncAllSlides();
+                    scheduleAutosave();
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function insertCodeBlock() {
+            const language = document.getElementById('codeLanguage').value;
+            const code = prompt('Enter code / Kodu girin:', '');
+            if (code === null) return;
+            const pre = document.createElement('pre');
+            pre.className = 'myork-code';
+            pre.dataset.language = language;
+            pre.contentEditable = 'true';
+            const codeElement = document.createElement('code');
+            codeElement.textContent = code;
+            pre.appendChild(codeElement);
+            const slide = document.querySelector('.slide.active');
+            if (slide) {
+                slide.appendChild(pre);
+                syncAllSlides();
+                scheduleAutosave();
             }
         }
 
@@ -480,21 +638,81 @@
         }
 
         function startPresentation() {
-            let slideIndex = 0;
-            const slideElements = document.querySelectorAll('.slide');
-            slideElements.forEach(slide => slide.classList.remove('active'));
+            syncAllSlides();
+            const deck = window.open('', '_blank');
+            if (!deck) { alert('Please allow pop-ups to present.'); return; }
+            const pages = slides.map((html, index) =>
+                '<section class="page' + (index === 0 ? ' active' : '') + '">' + html + '</section>'
+            ).join('');
+            deck.document.write('<!doctype html><html><head><meta charset="utf-8"><title>MyorkSlydes Presentation</title><style>body{margin:0;background:#111;color:#111;font-family:Arial}.page{display:none;box-sizing:border-box;width:100vw;height:100vh;padding:5vw;background:white;overflow:auto;font-size:24px}.page.active{display:block}img{max-width:100%;height:auto}.myork-code{background:#111827;color:#e5e7eb;padding:14px;white-space:pre-wrap}</style></head><body>' + pages + '<script>let i=0;const p=[...document.querySelectorAll(".page")];function show(n){p.forEach((e,j)=>e.classList.toggle("active",j===n));i=n}document.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key===" "){show(Math.min(i+1,p.length-1))}if(e.key==="ArrowLeft"){show(Math.max(i-1,0))}if(e.key==="Escape")window.close()});</' + 'script></body></html>');
+            deck.document.close();
+        }
 
-            function showSlide() {
-                if (slideIndex < slideElements.length) {
-                    slideElements[slideIndex].classList.add('active');
-                    setTimeout(() => {
-                        slideElements[slideIndex].classList.remove('active');
-                        slideIndex++;
-                        showSlide();
-                    }, 3000);
-                }
+        function exportSlidesHTML() {
+            syncAllSlides();
+            const pages = slides.map((html, index) => '<section class="slide"><h2>Slide ' + (index + 1) + '</h2>' + html + '</section>').join('');
+            const output = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MyorkSlydes export</title><style>body{font-family:Arial;margin:0;background:#eee}.slide{box-sizing:border-box;width:960px;min-height:540px;margin:30px auto;padding:40px;background:white;page-break-after:always}img{max-width:100%;height:auto}.myork-code{background:#111827;color:#e5e7eb;padding:14px;white-space:pre-wrap}</style></head><body>' + pages + '</body></html>';
+            downloadBlob(new Blob([output], {type:'text/html;charset=utf-8'}), 'presentation.html');
+        }
+
+        async function exportSlidesPDF() {
+            syncAllSlides();
+            if (typeof html2pdf !== 'function') { alert('PDF export library unavailable'); return; }
+            const holder = document.createElement('div');
+            holder.style.position = 'fixed';
+            holder.style.left = '-100000px';
+            holder.style.width = '960px';
+            slides.forEach((html, index) => {
+                const page = document.createElement('section');
+                page.style.cssText = 'box-sizing:border-box;width:960px;height:540px;padding:40px;background:white;color:#111;font:24px Arial;overflow:hidden;page-break-after:always;';
+                page.innerHTML = html;
+                holder.appendChild(page);
+            });
+            document.body.appendChild(holder);
+            try {
+                await html2pdf().set({filename:'presentation.pdf',margin:0,html2canvas:{scale:1.5,useCORS:true},jsPDF:{unit:'px',format:[960,540],orientation:'landscape'}}).from(holder).save();
+            } finally { holder.remove(); }
+        }
+
+        async function exportSlidesImage(type) {
+            syncAllSlides();
+            if (typeof html2canvas !== 'function') { alert('Image export library unavailable'); return; }
+            for (let i=0;i<slides.length;i++) {
+                const page = document.createElement('div');
+                page.style.cssText = 'position:fixed;left:-100000px;top:0;width:1280px;height:720px;box-sizing:border-box;padding:60px;background:#fff;color:#111;font:28px Arial;overflow:hidden;';
+                page.innerHTML = slides[i];
+                document.body.appendChild(page);
+                try {
+                    const canvas = await html2canvas(page,{scale:1,backgroundColor:'#ffffff',useCORS:true});
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve,type==='jpeg'?'image/jpeg':'image/png',0.95));
+                    if (blob) downloadBlob(blob,'slide-'+(i+1)+'.'+(type==='jpeg'?'jpg':'png'));
+                } finally { page.remove(); }
             }
-            showSlide();
+        }
+
+        async function exportSlidesPPTX() {
+            syncAllSlides();
+            try {
+                const pptxgen = (await import('https://esm.sh/pptxgenjs@3.12.0')).default;
+                const pptx = new pptxgen();
+                pptx.layout = 'LAYOUT_WIDE';
+                pptx.author = 'Two Plasma Studios';
+                pptx.subject = 'MyorkSlydes presentation';
+                pptx.title = 'MyorkSlydes Presentation';
+                slides.forEach(html => {
+                    const slide = pptx.addSlide();
+                    const text = html.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|h[1-6]|li|tr)>/gi,'\n').replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+                    if (text) slide.addText(text,{x:0.5,y:0.4,w:12.2,h:6.5,fontFace:'Aptos',fontSize:20,breakLine:false,fit:'shrink'});
+                    const images = [...html.matchAll(/<img[^>]+src=["'](data:image\/(?:png|jpeg|jpg);base64,[^"']+)["'][^>]*>/gi)];
+                    images.forEach((match,index) => {
+                        try { slide.addImage({data:match[1],x:0.7,y:4.8+index*0.3,w:3.5,h:1.6,transparency:0}); } catch(error) {}
+                    });
+                });
+                await pptx.writeFile({fileName:'presentation.pptx'});
+            } catch (error) {
+                console.error(error);
+                alert('PPTX export failed. Please check your connection and try again.');
+            }
         }
     </script>
 </body>
