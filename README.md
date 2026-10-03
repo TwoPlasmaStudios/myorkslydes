@@ -1,44 +1,43 @@
 # MyorkSlydes
 
-**MyorkSlydes** is an open-source, browser-based presentation editor prototype from Two Plasma Studios. It is the slide-focused companion to MyorkText, with a long-term goal of supporting common presentation formats and multilingual code-rich slides.
+MyorkSlydes is an open-source, browser-based presentation editor prototype by Two Plasma Studios.
 
 ## Current features
 
 - Turkish and English interface
-- Create, delete and navigate slides
-- Rich text formatting, colors, alignment, images, shapes, tables and basic charts
-- Code blocks with language labels for HTML, JavaScript, TypeScript, Python, CSS, Java, Dart, React/JSX, JSON, SQL, C++, C#, Go, Rust, Kotlin and Swift
-- Local draft autosave and recovery
-- Import MyorkSlydes JSON / `.myorksldy` files
-- Save to the versioned MyorkSlydes JSON format
-- Export to HTML, PDF, PNG/JPEG slide images and PPTX
-- Arrow-key navigation in presentation mode
+- Create, delete and navigate between slides
+- Edit slide text in the browser
+- Font family and size controls
+- Bold, italic, underline, text color, highlight and alignment controls
+- Insert an image from a URL
+- Insert simple shapes, a basic bar chart and a table
+- Save slides to a `.myorksldy` JSON file
+- Basic timed presentation mode
 
-## Run
+## Run locally
 
-Open `program/myorkslydes.html` in a modern desktop browser. PDF, image and PPTX exports use browser-loaded libraries, so those features require an internet connection unless dependencies are bundled locally.
+Open `program/myorkslydes.html` in a modern desktop browser. No build step is required.
 
 ## Current limitations
 
-- **Prototype:** not yet a complete replacement for Microsoft PowerPoint or LibreOffice Impress.
-- PPTX export currently prioritizes readable text and embedded raster images; complex formatting, native editable shapes, chart data, animations, speaker notes and transitions are not fully preserved.
-- PNG/JPEG export downloads one image per slide.
-- Browser local storage is local to the current browser/profile; it is not cloud sync.
-- External libraries and browsers may behave differently. Test important presentations after exporting.
+- This is an early prototype, not a full PowerPoint or LibreOffice Impress replacement.
+- The current save workflow exports a JSON array of slide HTML. A matching file-open/import workflow is not yet implemented.
+- PPTX, PDF, HTML presentation export and PNG/JPEG export are not currently implemented.
+- Autosave and cloud synchronization are not implemented.
+- Presentation mode and slide layout need more testing; complex themes, transitions, animations and speaker notes are not supported.
 
 ## Roadmap
 
-- Improve import/export fidelity and support more presentation formats
-- Preserve layout, shapes, charts and theme information in a structured document model
-- Add editable slide ordering and richer presenter controls
-- Add regression tests for file import/export
-- Package desktop releases after core workflows are stable
+- Add validated save and load workflows
+- Define a versioned MyorkSlydes document format
+- Add reliable export formats and regression tests
+- Improve slide ordering, layout and presentation controls
 
 ## Links
 
-- **Studio:** https://twoplasmastudios.github.io/
-- **All projects:** https://twoplasmastudios.github.io/projects.html
-- **Source:** https://github.com/TwoPlasmaStudios/myorkslydes
+- [Two Plasma Studios](https://twoplasmastudios.github.io/)
+- [All projects](https://twoplasmastudios.github.io/projects.html)
+- [MyorkSlydes source](https://github.com/TwoPlasmaStudios/myorkslydes)
 
 ---
 
