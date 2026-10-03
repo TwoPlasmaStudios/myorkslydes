@@ -230,10 +230,12 @@
         let currentSlideIndex = 0;
 
         function changeLanguage(lang) {
+            if (!translations[lang]) return;
             currentLang = lang;
             document.querySelectorAll('[data-lang-key]').forEach(el => {
                 const key = el.dataset.langKey;
-                el.textContent = translations[lang][key];
+                if (el.tagName === 'SELECT') return;
+                if (translations[lang][key]) el.textContent = translations[lang][key];
             });
             document.getElementById('language').value = lang;
         }
