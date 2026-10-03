@@ -173,6 +173,7 @@
             <button data-lang-key="save" onclick="saveSlides()">Kaydet</button>
             <button onclick="loadSlides()">Open / Aç</button>
             <button onclick="insertCodeBlock()">Code / Kod</button>
+            <button onclick="runCodeSnippet()">Run HTML/JS</button>
             <select id="codeLanguage" aria-label="Code language">
                 <option value="html">HTML</option><option value="javascript">JavaScript</option>
                 <option value="typescript">TypeScript</option><option value="python">Python</option>
@@ -275,10 +276,14 @@
         let currentSlideIndex = 0;
 
         function changeLanguage(lang) {
+            if (!translations[lang]) return;
             currentLang = lang;
             document.querySelectorAll('[data-lang-key]').forEach(el => {
                 const key = el.dataset.langKey;
-                el.textContent = translations[lang][key];
+                if (el.tagName === 'SELECT') return;
+                if (translations[lang][key] !== undefined) {
+                    el.textContent = translations[lang][key];
+                }
             });
             document.getElementById('language').value = lang;
         }
@@ -506,6 +511,30 @@
                 reader.readAsDataURL(file);
             };
             input.click();
+        }
+
+
+        function runCodeSnippet() {
+            const language = document.getElementById('codeLanguage').value;
+            if (!['html', 'javascript'].includes(language)) {
+                alert('Browser preview supports HTML and JavaScript. Other languages remain editable code.');
+                return;
+            }
+            const code = prompt('Paste HTML or JavaScript to run in a sandboxed preview:', '');
+            if (code === null) return;
+            const preview = window.open('', '_blank');
+            if (!preview) { alert('Please allow pop-ups to open the preview.'); return; }
+            preview.document.open();
+            preview.document.write('<!doctype html><html><head><meta charset="utf-8"><title>MyorkSlydes Code Preview</title></head><body><h2>MyorkSlydes Preview</h2></body></html>');
+            preview.document.close();
+            const frame = preview.document.createElement('iframe');
+            frame.setAttribute('sandbox', 'allow-scripts');
+            frame.style.cssText = 'width:100%;height:80vh;border:1px solid #ccc';
+            preview.document.body.appendChild(frame);
+            const source = language === 'javascript'
+                ? '<!doctype html><html><body><div id="app"></div><script>' + code.replace(/<\\/script/gi, '<\\\\/script') + '<\\/script></body></html>'
+                : code;
+            frame.srcdoc = source;
         }
 
         function insertCodeBlock() {
